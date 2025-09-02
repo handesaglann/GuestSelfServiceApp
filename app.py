@@ -1,13 +1,21 @@
 from flask import Flask
+from database import init_db
 
-# Flask uygulamasını başlat
 app = Flask(__name__)
 
-# Ana sayfa ("/") rotası
-@app.route("/")
+@app.route("/")               # ana sayfa 200
 def home():
-    return "Hello, Guest Self-Service App!"
+    return "Home OK", 200
 
-# Uygulamayı çalıştır
+@app.route("/health")         # sağlık kontrolü 200
+def health():
+    return "OK", 200
+
+@app.route("/init-db")        # tabloyu kurar
+def init_database():
+    init_db()
+    return "Database initialized!"
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    print("Loaded from:", __file__)
+    app.run(debug=True, port=5000, use_reloader=False)  # port=5000, reloader kapalı
