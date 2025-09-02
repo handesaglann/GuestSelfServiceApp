@@ -1,14 +1,22 @@
 import os, sqlite3
 from flask import g
 
+# DB yolu ve klasör
 DB_PATH = os.path.join(os.path.dirname(__file__), "instance", "app.db")
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)  # instance/ yoksa aç
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)  # instance/ yoksa oluştur
+
+def _connect():
+    # timeout: kilit varsa bekle, check_same_thread: Flask threadlarında kullan
+    conn = sqlite3.connect(DB_PATH, timeout=10, check_same_thread=False)
+    conn.row_factory = sqlite3.Row  # sonuçları dict gibi döndür
+    # Daha güvenli/istikrarlı çalışsın diye pragmalar
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA journal_mode = WAL;")
+    return conn
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row  # sonuçları dict gibi döndür
-        g.db.execute("PRAGMA foreign_keys = ON;")
+        g.db = _connect()
     return g.db
 
 def close_db(e=None):
@@ -71,4 +79,3 @@ def init_db():
     );
     """)
     db.commit()
-
