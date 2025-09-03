@@ -1,11 +1,10 @@
 from flask import Flask
-from database import init_db, get_db, close_db
+from database import init_db, get_db, close_db, create_service, get_all_services
 from sqlite3 import IntegrityError
 import os
 from flask import request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlite3 import IntegrityError
-from database import get_db
+
 
 
 app = Flask(__name__)
@@ -120,6 +119,37 @@ def me():
 def logout():
     session.clear()   # tüm session değerlerini sil
     return jsonify({"message": "logged out"})
+
+@app.route("/services", methods=["GET"])
+def list_services():
+    """Tüm aktif servisleri listele"""
+    services = get_all_services(active_only=True)
+    return jsonify(services), 200
+
+
+@app.route("/services", methods=["POST"])
+def add_service():
+    """Yeni bir servis ekle"""
+    data = request.get_json(silent=True) or {}
+    name = data.get("name", "").strip()
+    description = data.get("description", "").strip()
+    price = data.get("price")
+
+    # Zorunlu alan kontrolü
+    if not name or price is None:
+        return jsonify({"error": "name and price required"}), 400
+
+    # DB’ye kaydet
+    service_id = create_service(name, description, price)
+
+    # Eklenen servisi geri al
+    db = get_db()
+    row = db.execute("SELECT * FROM services WHERE id=?", (service_id,)).fetchone()
+
+    return jsonify({
+        "message": "service created",
+        "service": dict(row)
+    }), 201
 
 
 

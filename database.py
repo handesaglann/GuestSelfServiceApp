@@ -79,3 +79,54 @@ def init_db():
     );
     """)
     db.commit()
+# --- SERVICES CRUD ---
+
+def create_service(name, description, price, is_active=1):
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO services (name, description, price, is_active) VALUES (?, ?, ?, ?)",
+        (name, description, price, is_active),
+    )
+    db.commit()
+    return cur.lastrowid
+
+def get_all_services(active_only=True):
+    db = get_db()
+    if active_only:
+        rows = db.execute("SELECT * FROM services WHERE is_active=1").fetchall()
+    else:
+        rows = db.execute("SELECT * FROM services").fetchall()
+    return [dict(r) for r in rows]
+
+def get_service_by_id(service_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM services WHERE id=?", (service_id,)).fetchone()
+    return dict(row) if row else None
+
+def update_service(service_id, name=None, description=None, price=None, is_active=None):
+    db = get_db()
+    fields, values = [], []
+    if name is not None:
+        fields.append("name=?")
+        values.append(name)
+    if description is not None:
+        fields.append("description=?")
+        values.append(description)
+    if price is not None:
+        fields.append("price=?")
+        values.append(price)
+    if is_active is not None:
+        fields.append("is_active=?")
+        values.append(is_active)
+    if not fields:
+        return False
+    values.append(service_id)
+    db.execute(f"UPDATE services SET {', '.join(fields)} WHERE id=?", values)
+    db.commit()
+    return True
+
+def delete_service(service_id):
+    db = get_db()
+    db.execute("DELETE FROM services WHERE id=?", (service_id,))
+    db.commit()
+    return True
