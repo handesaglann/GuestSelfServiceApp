@@ -130,3 +130,46 @@ def delete_service(service_id):
     db.execute("DELETE FROM services WHERE id=?", (service_id,))
     db.commit()
     return True
+
+# --- RESERVATIONS CRUD ---
+
+def create_reservation(user_id, service_id, start_time, end_time=None, note=None):
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO reservations (user_id, service_id, start_time, end_time, note)
+           VALUES (?, ?, ?, ?, ?)""",
+        (user_id, service_id, start_time, end_time, note),
+    )
+    db.commit()
+    return cur.lastrowid
+
+def get_reservations_by_user(user_id):
+    db = get_db()
+    rows = db.execute(
+        """SELECT r.id, r.start_time, r.end_time, r.status, r.note,
+                  s.name as service_name, s.price
+           FROM reservations r
+           JOIN services s ON r.service_id = s.id
+           WHERE r.user_id = ?
+           ORDER BY r.created_at DESC""",
+        (user_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+def get_reservation_by_id(res_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM reservations WHERE id=?", (res_id,)).fetchone()
+    return dict(row) if row else None
+
+def update_reservation_status(res_id, status):
+    db = get_db()
+    db.execute("UPDATE reservations SET status=? WHERE id=?", (status, res_id))
+    db.commit()
+    return True
+
+def delete_reservation(res_id):
+    db = get_db()
+    db.execute("DELETE FROM reservations WHERE id=?", (res_id,))
+    db.commit()
+    return True
+

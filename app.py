@@ -4,6 +4,12 @@ from sqlite3 import IntegrityError
 import os
 from flask import request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
+from database import (
+    create_reservation, get_reservations_by_user, get_reservation_by_id,
+    delete_reservation, update_reservation_status
+)
+
+
 
 
 
@@ -150,6 +156,55 @@ def add_service():
         "message": "service created",
         "service": dict(row)
     }), 201
+
+# --- RESERVATIONS ---
+
+@app.route("/reservations", methods=["GET"])
+def list_reservations():
+    """Giriş yapan kullanıcının rezervasyonlarını getir"""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+
+    reservations = get_reservations_by_user(uid)
+    return jsonify(reservations), 200
+
+
+@app.route("/reservations", methods=["POST"])
+def add_reservation():
+    """Yeni rezervasyon oluştur"""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    service_id = data.get("service_id")
+    start_time = data.get("start_time")
+    end_time = data.get("end_time")
+    note = data.get("note")
+
+    if not service_id or not start_time:
+        return jsonify({"error": "service_id and start_time required"}), 400
+
+    res_id = create_reservation(uid, service_id, start_time, end_time, note)
+    return jsonify({"message": "reservation created", "id": res_id}), 201
+
+
+@app.route("/reservations/<int:res_id>", methods=["DELETE"])
+def remove_reservation(res_id):
+    """Kullanıcının kendi rezervasyonunu silmesi"""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+
+    res = get_reservation_by_id(res_id)
+    if not res:
+        return jsonify({"error": "reservation not found"}), 404
+    if res["user_id"] != uid:
+        return jsonify({"error": "not authorized"}), 403
+
+    delete_reservation(res_id)
+    return jsonify({"message": "reservation deleted"}), 200
 
 
 
