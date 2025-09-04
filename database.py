@@ -173,3 +173,50 @@ def delete_reservation(res_id):
     db.commit()
     return True
 
+
+# --- COMPLAINTS CRUD ---
+
+def create_complaint(user_id, title, text):
+    """Yeni şikayet oluşturur."""
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO complaints (user_id, title, text) VALUES (?, ?, ?)",
+        (user_id, title, text)
+    )
+    db.commit()
+    return cur.lastrowid
+
+
+def get_complaints_by_user(user_id):
+    """Kullanıcının kendi şikayetlerini döndürür."""
+    db = get_db()
+    rows = db.execute(
+        """SELECT id, title, text, status, created_at
+           FROM complaints
+           WHERE user_id = ?
+           ORDER BY created_at DESC""",
+        (user_id,)
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_complaint_by_id(complaint_id):
+    """Tek bir şikayeti getirir."""
+    db = get_db()
+    row = db.execute(
+        "SELECT * FROM complaints WHERE id = ?",
+        (complaint_id,)
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def update_complaint_status(complaint_id, status):
+    """Şikayet durumunu günceller (örn: open → resolved)."""
+    db = get_db()
+    db.execute(
+        "UPDATE complaints SET status = ? WHERE id = ?",
+        (status, complaint_id)
+    )
+    db.commit()
+    return True
+

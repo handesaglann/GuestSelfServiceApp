@@ -8,6 +8,10 @@ from database import (
     create_reservation, get_reservations_by_user, get_reservation_by_id,
     delete_reservation, update_reservation_status
 )
+from database import (
+    create_complaint, get_complaints_by_user,
+    get_complaint_by_id, update_complaint_status
+)
 
 
 
@@ -148,7 +152,7 @@ def add_service():
     # DB’ye kaydet
     service_id = create_service(name, description, price)
 
-    # Eklenen servisi geri al
+    # Eklenen servisi geri als
     db = get_db()
     row = db.execute("SELECT * FROM services WHERE id=?", (service_id,)).fetchone()
 
@@ -206,8 +210,42 @@ def remove_reservation(res_id):
     delete_reservation(res_id)
     return jsonify({"message": "reservation deleted"}), 200
 
+# --- COMPLAINTS ---
+
+@app.route("/complaints", methods=["GET"])
+def list_complaints():
+    """Giriş yapan kullanıcının şikayetlerini getir"""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+
+    complaints = get_complaints_by_user(uid)
+    return jsonify(complaints), 200
+
+
+@app.route("/complaints", methods=["POST"])
+def add_complaint():
+    """Yeni şikayet oluştur"""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    title = data.get("title", "").strip()
+    text = data.get("text", "").strip()
+
+    if not title or not text:
+        return jsonify({"error": "title and text required"}), 400
+
+    comp_id = create_complaint(uid, title, text)
+    return jsonify({"message": "complaint created", "id": comp_id}), 201
+
+
 
 
 if __name__ == "__main__":
     print("Loaded from:", __file__, flush=True)
     app.run(debug=True, port=5002, use_reloader=False)
+
+
+
