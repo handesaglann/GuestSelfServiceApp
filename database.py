@@ -6,10 +6,8 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "instance", "app.db")
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)  # instance/ yoksa oluştur
 
 def _connect():
-    # timeout: kilit varsa bekle, check_same_thread: Flask threadlarında kullan
     conn = sqlite3.connect(DB_PATH, timeout=10, check_same_thread=False)
-    conn.row_factory = sqlite3.Row  # sonuçları dict gibi döndür
-    # Daha güvenli/istikrarlı çalışsın diye pragmalar
+    conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA journal_mode = WAL;")
     return conn
@@ -79,8 +77,8 @@ def init_db():
     );
     """)
     db.commit()
-# --- SERVICES CRUD ---
 
+# --- SERVICES CRUD ---
 def create_service(name, description, price, is_active=1):
     db = get_db()
     cur = db.execute(
@@ -132,7 +130,6 @@ def delete_service(service_id):
     return True
 
 # --- RESERVATIONS CRUD ---
-
 def create_reservation(user_id, service_id, start_time, end_time=None, note=None):
     db = get_db()
     cur = db.execute(
@@ -173,11 +170,8 @@ def delete_reservation(res_id):
     db.commit()
     return True
 
-
 # --- COMPLAINTS CRUD ---
-
 def create_complaint(user_id, title, text):
-    """Yeni şikayet oluşturur."""
     db = get_db()
     cur = db.execute(
         "INSERT INTO complaints (user_id, title, text) VALUES (?, ?, ?)",
@@ -186,9 +180,7 @@ def create_complaint(user_id, title, text):
     db.commit()
     return cur.lastrowid
 
-
 def get_complaints_by_user(user_id):
-    """Kullanıcının kendi şikayetlerini döndürür."""
     db = get_db()
     rows = db.execute(
         """SELECT id, title, text, status, created_at
@@ -199,9 +191,7 @@ def get_complaints_by_user(user_id):
     ).fetchall()
     return [dict(r) for r in rows]
 
-
 def get_complaint_by_id(complaint_id):
-    """Tek bir şikayeti getirir."""
     db = get_db()
     row = db.execute(
         "SELECT * FROM complaints WHERE id = ?",
@@ -209,9 +199,7 @@ def get_complaint_by_id(complaint_id):
     ).fetchone()
     return dict(row) if row else None
 
-
 def update_complaint_status(complaint_id, status):
-    """Şikayet durumunu günceller (örn: open → resolved)."""
     db = get_db()
     db.execute(
         "UPDATE complaints SET status = ? WHERE id = ?",
@@ -219,4 +207,54 @@ def update_complaint_status(complaint_id, status):
     )
     db.commit()
     return True
+
+# --- INVOICES CRUD ---
+def create_invoice(user_id, total_amount, issued_at, currency="TRY", paid=0, source="system"):
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO invoices (user_id, total_amount, currency, issued_at, paid, source)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (user_id, total_amount, currency, issued_at, paid, source),
+    )
+    db.commit()
+    return cur.lastrowid
+
+def get_invoices_by_user(user_id):
+    db = get_db()
+    rows = db.execute(
+        """SELECT id, total_amount, currency, issued_at, paid, source
+           FROM invoices
+           WHERE user_id = ?
+           ORDER BY issued_at DESC""",
+        (user_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+def update_invoice_status(invoice_id, paid):
+    db = get_db()
+    db.execute("UPDATE invoices SET paid = ? WHERE id = ?", (paid, invoice_id))
+    db.commit()
+    return True
+
+def import_invoices_from_csv(file_path, user_id=None):
+    import csv
+    db = get_db()
+    with open(file_path, newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            db.execute(
+                """INSERT INTO invoices (user_id, total_amount, currency, issued_at, paid, source)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    user_id,  # her zaman login olan user_id kullanılacak
+                    float(row.get("total_amount", 0)),
+                    row.get("currency", "TRY"),
+                    row.get("issued_at"),
+                    int(row.get("paid", 0)),
+                    "csv"
+                ),
+            )
+    db.commit()
+    return True
+
 
