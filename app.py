@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, render_template
 from sqlite3 import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -69,9 +69,13 @@ def list_users():
     return {"users": [dict(u) for u in users]}
 
 
-@app.route("/register", methods=["POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    data = request.get_json(silent=True) or {}
+    if request.method == "GET":
+        return render_template("register.html")
+
+    # POST (form veya JSON)
+    data = request.form if request.form else request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
     email = data.get("email", "").strip().lower()
     password = data.get("password", "")
@@ -95,9 +99,13 @@ def register():
         return jsonify({"error": "email already exists"}), 409
 
 
-@app.route("/login", methods=["POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    data = request.get_json(silent=True) or {}
+    if request.method == "GET":
+        return render_template("login.html")
+
+    # POST (form veya JSON)
+    data = request.form if request.form else request.get_json(silent=True) or {}
     email = data.get("email", "").strip().lower()
     password = data.get("password", "")
 
@@ -302,10 +310,40 @@ def upload_invoices():
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     file.save(file_path)
 
-    # Artık CSV import işlemini database.py hallediyor
+    # CSV import işlemini database.py hallediyor
     import_invoices_from_csv(file_path, user_id=uid)
 
     return jsonify({"message": "invoices imported from CSV"}), 201
+
+@app.route("/logout-test")
+def logout_test_page():
+    return render_template("logout.html")
+
+@app.route("/services-page")
+def services_page():
+    return render_template("services.html")
+
+@app.route("/reservations-page")
+def reservations_page():
+    return render_template("reservations.html")
+
+@app.route("/complaints-page")
+def complaints_page():
+    return render_template("complaints.html")
+
+@app.route("/invoices-page")
+def invoices_page():
+    return render_template("invoices.html")
+
+@app.route("/my-total")
+def my_total():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+
+    total = get_user_total_spent(uid)
+    return jsonify({"total_spent": total})
+
 
 
 

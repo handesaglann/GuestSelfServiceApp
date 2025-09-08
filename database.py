@@ -257,4 +257,15 @@ def import_invoices_from_csv(file_path, user_id=None):
     db.commit()
     return True
 
+def get_user_total_spent(user_id):
+    db = get_db()
+    row = db.execute(
+        """SELECT SUM(s.price) as total
+           FROM reservations r
+           JOIN services s ON r.service_id = s.id
+           WHERE r.user_id = ?""",
+        (user_id,)
+    ).fetchone()
+    return row["total"] if row and row["total"] else 0
+
 
