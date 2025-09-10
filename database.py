@@ -138,7 +138,19 @@ def create_reservation(user_id, service_id, start_time, end_time=None, note=None
         (user_id, service_id, start_time, end_time, note),
     )
     db.commit()
-    return cur.lastrowid
+    res_id = cur.lastrowid
+
+    # Rezervasyondan sonra otomatik fatura oluştur
+    service = db.execute("SELECT price FROM services WHERE id=?", (service_id,)).fetchone()
+    if service:
+        db.execute(
+            """INSERT INTO invoices (user_id, total_amount, currency, issued_at, paid, source)
+               VALUES (?, ?, ?, datetime('now'), 0, 'reservation')""",
+            (user_id, service["price"], "TRY")
+        )
+        db.commit()
+
+    return res_id
 
 def get_reservations_by_user(user_id):
     db = get_db()
@@ -268,4 +280,12 @@ def get_user_total_spent(user_id):
     ).fetchone()
     return row["total"] if row and row["total"] else 0
 
-
+def get_user_total_from_invoices(user_id):
+    db = get_db()
+    row = db.execute(
+        """SELECT SUM(total_amount) as total
+           FROM invoices
+           WHERE user_id = ?""",
+        (user_id,)
+    ).fetchone()
+    return row["total"] if row and row["total"] else 0

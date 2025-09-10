@@ -12,7 +12,8 @@ from database import (
     create_complaint, get_complaints_by_user,
     get_complaint_by_id, update_complaint_status,
     create_invoice, get_invoices_by_user,
-    update_invoice_status, import_invoices_from_csv
+    update_invoice_status, import_invoices_from_csv,
+    get_user_total_from_invoices
 )
 
 app = Flask(__name__)
@@ -35,7 +36,8 @@ def teardown_db(exception):
 # --- Health & Home ---
 @app.route("/")
 def home():
-    return "Home OK", 200
+    return render_template("home.html")
+
 
 @app.route("/health")
 def health():
@@ -122,10 +124,10 @@ def login():
         return jsonify({"error": "invalid credentials"}), 401
 
     session["user_id"] = row["id"]
-    return jsonify({
-        "message": "login ok",
-        "user": {"id": row["id"], "name": row["name"], "email": row["email"]}
-    })
+
+    # JSON yerine hoş geldin sayfası
+    return render_template("welcome.html", user=dict(row))
+
 
 
 @app.route("/me", methods=["GET"])
@@ -315,6 +317,15 @@ def upload_invoices():
 
     return jsonify({"message": "invoices imported from CSV"}), 201
 
+@app.route("/my-total")
+def my_total():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+
+    total = get_user_total_from_invoices(uid)
+    return jsonify({"total_spent": total})
+
 @app.route("/logout-test")
 def logout_test_page():
     return render_template("logout.html")
@@ -335,14 +346,14 @@ def complaints_page():
 def invoices_page():
     return render_template("invoices.html")
 
-@app.route("/my-total")
+"""@app.route("/my-total")
 def my_total():
     uid = session.get("user_id")
     if not uid:
         return jsonify({"error": "not authenticated"}), 401
 
     total = get_user_total_spent(uid)
-    return jsonify({"total_spent": total})
+    return jsonify({"total_spent": total})"""
 
 
 
