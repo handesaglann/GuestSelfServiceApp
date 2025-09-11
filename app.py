@@ -130,15 +130,16 @@ def login():
     # Eğer form üzerinden geliyorsa → yönlendirme yap
     if request.form:
         if row["role"] == "admin":
-            return redirect("/dashboard")
+            return redirect("/dashboard")   # admin → dashboard
         else:
-            return redirect("/services-page")
+            return render_template("welcome.html", user=dict(row))  # user → welcome
 
     # JSON API kullanıyorsa JSON dön
     return jsonify({
         "message": "login ok",
         "user": {"id": row["id"], "name": row["name"], "email": row["email"], "role": row["role"]}
     })
+
 
 
 @app.route("/me", methods=["GET"])

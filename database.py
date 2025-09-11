@@ -31,7 +31,8 @@ def init_db():
       email TEXT UNIQUE,
       password_hash TEXT,
       room_no TEXT,
-      phone TEXT
+      phone TEXT,
+      role TEXT NOT NULL DEFAULT 'user'
     );
 
     CREATE TABLE IF NOT EXISTS services (
@@ -77,6 +78,7 @@ def init_db():
     );
     """)
     db.commit()
+
 
 # --- SERVICES CRUD ---
 def create_service(name, description, price, is_active=1):
