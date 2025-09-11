@@ -289,3 +289,9 @@ def get_user_total_from_invoices(user_id):
         (user_id,)
     ).fetchone()
     return row["total"] if row and row["total"] else 0
+
+def is_admin(user_id):
+    db = get_db()
+    row = db.execute("SELECT role FROM users WHERE id=?", (user_id,)).fetchone()
+    return row and row["role"] == "admin"
+

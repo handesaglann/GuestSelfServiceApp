@@ -1,8 +1,11 @@
-from flask import Flask, request, jsonify, session, render_template
+from flask import Flask, request, jsonify, session, render_template, redirect
+
 from sqlite3 import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
+from database import is_admin
+
 
 from database import (
     init_db, get_db, close_db,
@@ -106,7 +109,6 @@ def login():
     if request.method == "GET":
         return render_template("login.html")
 
-    # POST (form veya JSON)
     data = request.form if request.form else request.get_json(silent=True) or {}
     email = data.get("email", "").strip().lower()
     password = data.get("password", "")
@@ -116,7 +118,7 @@ def login():
 
     db = get_db()
     row = db.execute(
-        "SELECT id, name, email, password_hash FROM users WHERE email = ?",
+        "SELECT id, name, email, password_hash, role FROM users WHERE email = ?",
         (email,)
     ).fetchone()
 
@@ -125,9 +127,18 @@ def login():
 
     session["user_id"] = row["id"]
 
-    # JSON yerine hoş geldin sayfası
-    return render_template("welcome.html", user=dict(row))
+    # Eğer form üzerinden geliyorsa → yönlendirme yap
+    if request.form:
+        if row["role"] == "admin":
+            return redirect("/dashboard")
+        else:
+            return redirect("/services-page")
 
+    # JSON API kullanıyorsa JSON dön
+    return jsonify({
+        "message": "login ok",
+        "user": {"id": row["id"], "name": row["name"], "email": row["email"], "role": row["role"]}
+    })
 
 
 @app.route("/me", methods=["GET"])
@@ -355,6 +366,139 @@ def my_total():
     total = get_user_total_spent(uid)
     return jsonify({"total_spent": total})"""
 
+
+@app.route("/dashboard")
+def dashboard():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+    if not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    db = get_db()
+    stats = {}
+    stats["total_users"] = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
+    stats["total_reservations"] = db.execute("SELECT COUNT(*) as c FROM reservations").fetchone()["c"]
+    stats["total_income"] = db.execute("SELECT SUM(total_amount) as s FROM invoices").fetchone()["s"] or 0
+    stats["open_complaints"] = db.execute("SELECT COUNT(*) as c FROM complaints WHERE status='open'").fetchone()["c"]
+
+    # Kullanıcı listesi
+    rows = db.execute("SELECT id, name, email FROM users ORDER BY name ASC").fetchall()
+    users = [dict(r) for r in rows]
+
+    return render_template("dashboard.html", stats=stats, users=users)
+
+
+
+@app.route("/admin/users")
+def admin_users():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+    if not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    db = get_db()
+    rows = db.execute("SELECT id, name, email FROM users ORDER BY name ASC").fetchall()
+    return render_template("admin_users.html", users=[dict(r) for r in rows])
+
+@app.route("/admin/user/<int:user_id>")
+def admin_user_detail(user_id):
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not authenticated"}), 401
+    if not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    db = get_db()
+    user = db.execute("SELECT id, name, email FROM users WHERE id=?", (user_id,)).fetchone()
+    if not user:
+        return "User not found", 404
+
+    reservations = db.execute("""
+        SELECT r.id, s.name as service_name, r.start_time, r.end_time, r.status
+        FROM reservations r
+        JOIN services s ON r.service_id = s.id
+        WHERE r.user_id=?
+    """, (user_id,)).fetchall()
+
+    invoices = db.execute("""
+        SELECT id, total_amount, currency, issued_at, paid, source
+        FROM invoices WHERE user_id=?
+    """, (user_id,)).fetchall()
+
+    complaints = db.execute("""
+        SELECT id, title, text, status, created_at
+        FROM complaints WHERE user_id=?
+    """, (user_id,)).fetchall()
+
+    return render_template("admin_user_detail.html",
+                           user=dict(user),
+                           reservations=[dict(r) for r in reservations],
+                           invoices=[dict(i) for i in invoices],
+                           complaints=[dict(c) for c in complaints])
+
+
+# --- ADMIN: Complaints yönetimi ---
+@app.route("/admin/complaints")
+def admin_complaints():
+    uid = session.get("user_id")
+    if not uid or not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    db = get_db()
+    rows = db.execute("""
+        SELECT c.id, u.name as user_name, c.title, c.text, c.status, c.created_at
+        FROM complaints c
+        JOIN users u ON c.user_id = u.id
+        ORDER BY c.created_at DESC
+    """).fetchall()
+    return render_template("admin_complaints.html", complaints=[dict(r) for r in rows])
+
+@app.route("/admin/complaint/<int:cid>/status", methods=["POST"])
+def admin_update_complaint(cid):
+    uid = session.get("user_id")
+    if not uid or not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    new_status = request.form.get("status") or request.json.get("status")
+    if new_status not in ["open", "in_progress", "resolved"]:
+        return jsonify({"error": "invalid status"}), 400
+
+    db = get_db()
+    db.execute("UPDATE complaints SET status=? WHERE id=?", (new_status, cid))
+    db.commit()
+    return redirect("/admin/complaints")
+
+@app.route("/admin/reservation/<int:rid>/status", methods=["POST"])
+def admin_update_reservation(rid):
+    uid = session.get("user_id")
+    if not uid or not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    new_status = request.form.get("status")
+    if new_status not in ["pending", "approved", "cancelled"]:
+        return jsonify({"error": "invalid status"}), 400
+
+    db = get_db()
+    db.execute("UPDATE reservations SET status=? WHERE id=?", (new_status, rid))
+    db.commit()
+    return redirect(request.referrer or "/dashboard")
+
+
+@app.route("/admin/invoice/<int:invoice_id>/status", methods=["POST"])
+def admin_update_invoice(invoice_id):
+    uid = session.get("user_id")
+    if not uid or not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    paid = int(request.form.get("paid", 0))
+    db = get_db()
+    db.execute("UPDATE invoices SET paid=? WHERE id=?", (paid, invoice_id))
+    db.commit()
+
+    # geri ilgili user detail sayfasına dön
+    return redirect(request.referrer or "/dashboard")
 
 
 
