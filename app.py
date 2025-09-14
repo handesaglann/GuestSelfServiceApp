@@ -509,6 +509,58 @@ def admin_update_invoice(invoice_id):
     # geri ilgili user detail sayfasına dön
     return redirect(request.referrer or "/dashboard")
 
+# --- ADMIN: Services management ---
+@app.route("/admin/services", methods=["GET"])
+def admin_services():
+    uid = session.get("user_id")
+    if not uid or not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    db = get_db()
+    rows = db.execute("SELECT id, name, description, price FROM services").fetchall()
+    return render_template("admin_services.html", services=[dict(r) for r in rows])
+
+
+@app.route("/admin/services/add", methods=["POST"])
+def admin_add_service():
+    uid = session.get("user_id")
+    if not uid or not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    name = request.form.get("name")
+    description = request.form.get("description")
+    price = request.form.get("price")
+
+    if not name or not price:
+        return "Name and price required", 400
+
+    db = get_db()
+    db.execute(
+        "INSERT INTO services (name, description, price) VALUES (?, ?, ?)",
+        (name, description, price),
+    )
+    db.commit()
+    return redirect("/admin/services")
+
+
+@app.route("/admin/services/<int:sid>/update", methods=["POST"])
+def admin_update_service(sid):
+    uid = session.get("user_id")
+    if not uid or not is_admin(uid):
+        return jsonify({"error": "not authorized"}), 403
+
+    description = request.form.get("description")
+    price = request.form.get("price")
+
+    db = get_db()
+    db.execute(
+        "UPDATE services SET description=?, price=? WHERE id=?",
+        (description, price, sid),
+    )
+    db.commit()
+    return redirect("/admin/services")
+
+
 
 
 
