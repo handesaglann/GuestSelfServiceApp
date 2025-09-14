@@ -35,8 +35,10 @@
     </div>
   </div>
 
+  
+
   <!-- Kullanıcı Listesi -->
-  <h3 class="mt-5">👥 Users</h3>
+  <h3 class="mt-4">👥 Users</h3>
   <table class="table table-bordered">
     <thead>
       <tr>
@@ -60,9 +62,12 @@
     </tbody>
   </table>
 
-  <!-- Ana sayfaya dönüş -->
+  <!-- Çıkış -->
   <div class="text-center mt-4">
-    <a href="/" class="btn btn-outline-primary">🏠 Go to Homepage</a>
+    <form action="/logout" method="post">
+      <button type="submit" class="btn btn-outline-danger">🚪 Logout</button>
+    </form>
   </div>
+
 </body>
 </html>

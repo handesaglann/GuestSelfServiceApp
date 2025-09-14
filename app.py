@@ -38,8 +38,14 @@ def teardown_db(exception):
 
 # --- Health & Home ---
 @app.route("/")
-def home():
+def root():
+    return redirect("/login")
+
+
+@app.route("/home")
+def home_page():
     return render_template("home.html")
+
 
 
 @app.route("/health")
@@ -132,7 +138,7 @@ def login():
         if row["role"] == "admin":
             return redirect("/dashboard")   # admin → dashboard
         else:
-            return render_template("welcome.html", user=dict(row))  # user → welcome
+            return redirect("/home")
 
     # JSON API kullanıyorsa JSON dön
     return jsonify({
@@ -156,10 +162,11 @@ def me():
     return jsonify({"user": dict(row)})
 
 
-@app.route("/logout", methods=["POST"])
+@app.route("/logout", methods=["GET", "POST"])
 def logout():
     session.clear()
-    return jsonify({"message": "logged out"})
+    return render_template("logout.html")
+
 
 
 # --- SERVICES ---
@@ -188,6 +195,7 @@ def add_service():
         "message": "service created",
         "service": dict(row)
     }), 201
+
 
 
 # --- RESERVATIONS ---
@@ -500,6 +508,8 @@ def admin_update_invoice(invoice_id):
 
     # geri ilgili user detail sayfasına dön
     return redirect(request.referrer or "/dashboard")
+
+
 
 
 

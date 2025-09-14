@@ -2,28 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Complaints</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <title>My Complaints</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container-box {
+      background: #1e1e1e;
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 0 25px rgba(0,0,0,0.7);
+      margin-top: 2rem;
+    }
+    h2 {
+      color: #fff;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+    }
+    .btn-danger {
+      background-color: #e63946;
+      border: none;
+      font-weight: bold;
+    }
+    .btn-danger:hover {
+      background-color: #ff4757;
+    }
+    .table {
+      background-color: #1c1c1c;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    thead {
+      background-color: #333 !important;
+    }
+    thead th {
+      color: #fff !important;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    label {
+      font-weight: bold;
+      color: #ccc;
+    }
+    .btn-outline-light {
+      border: 1px solid #bbb;
+      color: #bbb;
+    }
+    .btn-outline-light:hover {
+      background-color: #fff;
+      color: #000;
+    }
+  </style>
 </head>
-<body class="container mt-5">
-  <h2>My Complaints</h2>
+<body>
+<div class="container container-box">
+  <h2>📢 My Complaints</h2>
 
   <!-- Yeni Şikayet Formu -->
-  <div class="card p-3 mb-4">
-    <h5>Add New Complaints</h5>
+  <div class="card bg-dark text-light p-3 mb-4">
+    <h5 class="mb-3">➕ Add New Complaint</h5>
     <div class="mb-3">
-      <label class="form-label">Topic</label>
-      <input type="text" id="title" class="form-control">
+      <label for="title">Topic</label>
+      <input type="text" id="title" class="form-control bg-dark text-light" placeholder="Enter complaint topic">
     </div>
     <div class="mb-3">
-      <label class="form-label">Explanation</label>
-      <textarea id="text" class="form-control"></textarea>
+      <label for="text">Explanation</label>
+      <textarea id="text" class="form-control bg-dark text-light" placeholder="Enter complaint explanation"></textarea>
     </div>
-    <button class="btn btn-danger" onclick="addComplaint()">Send Complaints</button>
+    <button class="btn btn-danger w-100" onclick="addComplaint()">🚨 Send Complaint</button>
   </div>
 
   <!-- Şikayetler Tablosu -->
-  <table class="table table-bordered">
+  <table class="table table-dark table-striped">
     <thead>
       <tr>
         <th>Topic</th>
@@ -37,54 +90,55 @@
 
   <!-- Go to Homepage butonu -->
   <div class="text-center mt-4">
-    <a href="/" class="btn btn-outline-primary">🏠 Go to Homepage</a>
+    <a href="/home" class="btn btn-outline-light">⬅️ Back to Homepage</a>
   </div>
+</div>
 
-  <script>
-    // Şikayetleri listele
-    function loadComplaints() {
-      fetch("/complaints")
-        .then(res => res.json())
-        .then(complaints => {
-          const tbody = document.getElementById("complaintsBody");
-          tbody.innerHTML = "";
-          complaints.forEach(c => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${c.title}</td>
-              <td>${c.text}</td>
-              <td>${c.status}</td>
-              <td>${c.created_at}</td>
-            `;
-            tbody.appendChild(row);
-          });
-        });
-    }
-
-    // Yeni şikayet ekle
-    function addComplaint() {
-      const title = document.getElementById("title").value;
-      const text = document.getElementById("text").value;
-
-      if (!title || !text) {
-        alert("Başlık ve açıklama gerekli!");
-        return;
-      }
-
-      fetch("/complaints", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ title, text })
-      })
+<script>
+  // Şikayetleri listele
+  function loadComplaints() {
+    fetch("/complaints")
       .then(res => res.json())
-      .then(data => {
-        alert("Şikayet eklendi: " + JSON.stringify(data));
-        loadComplaints();
+      .then(complaints => {
+        const tbody = document.getElementById("complaintsBody");
+        tbody.innerHTML = "";
+        complaints.forEach(c => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${c.title}</td>
+            <td>${c.text}</td>
+            <td>${c.status}</td>
+            <td>${c.created_at}</td>
+          `;
+          tbody.appendChild(row);
+        });
       });
+  }
+
+  // Yeni şikayet ekle
+  function addComplaint() {
+    const title = document.getElementById("title").value;
+    const text = document.getElementById("text").value;
+
+    if (!title || !text) {
+      alert("Başlık ve açıklama gerekli!");
+      return;
     }
 
-    // Sayfa açılınca yükle
-    loadComplaints();
-  </script>
+    fetch("/complaints", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ title, text })
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert("Şikayet eklendi: " + JSON.stringify(data));
+      loadComplaints();
+    });
+  }
+
+  // Sayfa açılınca yükle
+  loadComplaints();
+</script>
 </body>
 </html>

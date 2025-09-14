@@ -4,41 +4,98 @@
   <meta charset="UTF-8">
   <title>Invoices</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .card {
+      background-color: #1e1e1e;
+      border: none;
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+    h2, h3 {
+      font-weight: bold;
+      color: #ffffff;
+      margin-bottom: 20px;
+    }
+    table {
+      color: #f8f9fa;
+    }
+    thead {
+      background-color: #212529;
+    }
+    .form-control {
+      background-color: #2c2c2c;
+      border: 1px solid #444;
+      color: #f8f9fa;
+    }
+    .form-control:focus {
+      background-color: #2c2c2c;
+      color: #fff;
+      border-color: #007bff;
+      box-shadow: none;
+    }
+    .btn-primary {
+      background-color: #007bff;
+      border: none;
+    }
+    .btn-primary:hover {
+      background-color: #0056b3;
+    }
+    .btn-outline-light {
+      border: 1px solid #f8f9fa;
+      color: #f8f9fa;
+    }
+    .btn-outline-light:hover {
+      background-color: #f8f9fa;
+      color: #121212;
+    }
+    .alert-dark {
+      background-color: #1e1e1e;
+      border: 1px solid #444;
+      color: #f8f9fa;
+    }
+  </style>
 </head>
 <body class="container mt-5">
-  <h2>My Invoices</h2>
+  <div class="card">
+    <h2>💳 My Invoices</h2>
 
-  <!-- Toplam Harcama -->
-  <div class="alert alert-info">
-    <strong>Total Spent: </strong> <span id="totalSpent">0</span> ₺
-  </div>
-
-  <!-- Fatura Tablosu -->
-  <table class="table table-bordered">
-    <thead>
-      <tr>
-        <th>Amount</th>
-        <th>Currency</th>
-        <th>Issued At</th>
-        <th>Paid</th>
-        <th>Source</th>
-      </tr>
-    </thead>
-    <tbody id="invoiceBody"></tbody>
-  </table>
-
-  <!-- CSV Yükleme (Admin/Test için) -->
-  <h3 class="mt-5">Upload Invoices (CSV)</h3>
-  <form id="uploadForm" enctype="multipart/form-data">
-    <div class="mb-3">
-      <input type="file" name="file" id="file" class="form-control">
+    <!-- Toplam Harcama -->
+    <div class="alert alert-dark">
+      <strong>Total Spent: </strong> <span id="totalSpent">0</span> ₺
     </div>
-    <button type="submit" class="btn btn-primary">Upload</button>
-  </form>
 
-  <!-- Go to Homepage butonu -->
-  <div class="text-center mt-4">
-    <a href="/" class="btn btn-outline-primary">🏠 Go to Homepage</a>
+    <!-- Fatura Tablosu -->
+    <table class="table table-dark table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Amount</th>
+          <th>Currency</th>
+          <th>Issued At</th>
+          <th>Paid</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody id="invoiceBody"></tbody>
+    </table>
+
+    <!-- CSV Yükleme (Admin/Test için) -->
+    <h3 class="mt-5">📂 Upload Invoices (CSV)</h3>
+    <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
+      <input type="file" name="file" id="file" class="form-control mb-2">
+      <button type="submit" class="btn btn-primary w-100">Upload</button>
+    </form>
+
+    <!-- Go to Homepage butonu -->
+    <div class="text-center mt-4">
+      <a href="/home" class="btn btn-outline-light">⬅ Back to Homepage</a>
+    </div>
   </div>
 
   <script>
@@ -55,7 +112,7 @@
               <td>${inv.total_amount}</td>
               <td>${inv.currency}</td>
               <td>${inv.issued_at}</td>
-              <td>${inv.paid ? "Yes" : "No"}</td>
+              <td>${inv.paid ? "✅ Yes" : "❌ No"}</td>
               <td>${inv.source}</td>
             `;
             tbody.appendChild(row);
